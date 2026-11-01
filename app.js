@@ -1,4 +1,4 @@
-export default function (express, bodyParser, createReadStream, crypto, http) {
+export default function (express, bodyParser, createReadStream, crypto, http, mongoose) {
   const app = express();
   const LOGIN = 'nata_levch';
 
@@ -52,6 +52,31 @@ export default function (express, bodyParser, createReadStream, crypto, http) {
   };
 
   app.route('/req/').get(fetchAddr).post(fetchAddr);
+
+  app.post('/insert/', async (req, res) => {
+    res.type('text/plain');
+    const { login, password, URL } = req.body;
+    let conn;
+    try {
+      conn = await mongoose.createConnection(URL, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+      });
+      const User = conn.model(
+        'User',
+        new mongoose.Schema({ login: String, password: String }),
+        'users'
+      );
+      await User.create({ login, password });
+      res.send('OK');
+    } catch (e) {
+      res.status(500).send(String(e.message));
+    } finally {
+      if (conn) {
+        await conn.close();
+      }
+    }
+  });
 
   app.all('*', (req, res) => {
     res.type('text/plain').send(LOGIN);
